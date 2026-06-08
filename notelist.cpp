@@ -86,7 +86,7 @@ NoteList::NoteList(QWidget* parent)
     QTextEdit *editor;
     for (int i = 0; i < flist.size(); ++i) {
         // Check a file for cursor positions
-        if (flist.at(i) == FILE_WITH_CURSOR_POSITIONS)
+        if (flist.at(i).fileName() == FILE_WITH_CURSOR_POSITIONS)
             continue;
         // Loading a note
         Note* note = this->add(flist.at(i), false);
@@ -199,16 +199,16 @@ Note::Type NoteList::getType(const QFileInfo& fileinfo) const
 
 void NoteList::create(Note::Type type, const QString& name)
 {
-	QString extension = noteTypes()[type].defaultExtension();
+    QString extension = noteTypes()[type].defaultExtension();
     QString filename = QString("%1.%2").arg(name.isEmpty() ? "0": name).arg(extension);
-	QFile file(dir.absoluteFilePath(filename));
-	int n = 0;
-	while(file.exists()) //Searching for free filename
-	{
-		filename = QString("%1.%2").arg(++n).arg(extension);
-		file.setFileName(dir.absoluteFilePath(filename));
-	}
-	add(file);
+    QFile file(dir.absoluteFilePath(filename));
+    int n = 0;
+    while(file.exists()) //Searching for free filename
+    {
+        filename = QString("%1.%2").arg(++n).arg(extension);
+        file.setFileName(dir.absoluteFilePath(filename));
+    }
+    add(QFileInfo(file));        // ← FIXED LINE
 }
 
 Note* NoteList::add(const QFileInfo& fileinfo, bool set_current)

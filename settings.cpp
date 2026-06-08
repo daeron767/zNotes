@@ -202,50 +202,42 @@ void Settings::load()
 				config.setValue(ToolbarAction(item_enum(tb_items[i])).pref_name(), i);
 	}
 
-    // Build two dictionaries of translation files for the program:
-    // 1) the program translation files;
-    // 2) qt library translation files.
-    loadLanguages();
-	//
-#ifdef unix
-	//Fixing Qt's problem on unix systems...
-	QString system_lang(qgetenv("LANG").constData());
-	system_lang.truncate(system_lang.indexOf('.'));
-	if(system_lang.size()) locale_system = QLocale(system_lang);
-	else locale_system = QLocale::system().language();
-#else
-	locale_system = QLocale::system().language();
-#endif
-	locale = (language_custom)?locale_current:locale_system;
-
     // Define priority locale for user interface.
     // Analyze only the program translation files dictionary.
-    QMap<int, QMap<int, QString> >::const_iterator it = translations.find(locale.language());
-	if(it!=translations.end()) //if translation list has locale language
-	{
-		const QMap<int, QString>& country_list = it.value();
-		if(!country_list.contains(locale.country()))
-		{
-			QList<QLocale::Country> language_countries = QLocale::countriesForLanguage(locale.language());
-			if(!language_countries.empty() && country_list.contains(language_countries[0]))
-			{
-				QLocale::Country country = language_countries[0];
-				locale = QLocale(locale.language(), country);
-			}
-			else if(!country_list.empty())
-			{
-				QLocale::Country country = QLocale::Country(country_list.begin().key());
-				locale = QLocale(locale.language(), country);
-			}
-			else locale = QLocale::c();
-		}
-	}
-	else locale = QLocale::c();
+    auto it = translations.find(locale.language());
+    if (it != translations.end())   // if translation list has locale language
+    {
+        const QMap<int, QString>& country_list = it.value();   // ← keep int here
+        if (!country_list.contains(static_cast<int>(locale.territory())))
+        {
+            QList<QLocale::Territory> language_territories;
+            const auto locales = QLocale::matchingLocales(locale.language(),
+                                                          QLocale::AnyScript,
+                                                          QLocale::AnyTerritory);
+            for (const auto& l : locales)
+                language_territories << l.territory();
 
+            if (!language_territories.isEmpty() && 
+                country_list.contains(static_cast<int>(language_territories[0])))
+            {
+                QLocale::Territory territory = language_territories[0];
+                locale = QLocale(locale.language(), territory);
+            }
+            else if (!country_list.isEmpty())
+            {
+                // Take the first available territory from the map
+                QLocale::Territory territory = static_cast<QLocale::Territory>(country_list.firstKey());
+                locale = QLocale(locale.language(), territory);
+            }
+            else
+                locale = QLocale::c();
+        }
+    }
+    else
+        locale = QLocale::c();
     // Load files from dictionary for defined locale.
     updateLocale();
-
-	qApp->installTranslator(&qtranslator);
+    qApp->installTranslator(&qtranslator);
     qApp->installTranslator(&translator);
 }
 
@@ -270,7 +262,7 @@ void Settings::loadLanguages()
 #endif
     // next path for qt library translation files
     // For MS Windows such files generally place in the program directory.
-    translation_dirs << QLibraryInfo::location(QLibraryInfo::TranslationsPath);
+    translation_dirs << QLibraryInfo::path(QLibraryInfo::TranslationsPath);
 
 	//looking for qm-files in translation directories
     QMap<int, QMap<int, QString> > *currTranslations;
@@ -302,8 +294,8 @@ void Settings::loadLanguages()
                 filename.remove(0, filename.indexOf('_') + 1);
                 filename.chop(3);
                 QLocale locale(filename);
-                if(!(*currTranslations)[locale.language()].contains(locale.country()))
-                    (*currTranslations)[locale.language()][locale.country()] = fullpath;
+                if(!(*currTranslations)[locale.language()].contains(locale.territory()))
+                    (*currTranslations)[locale.language()][locale.territory()] = fullpath;
             }
         }
         //Setting default(English) translation path if other translation not found
@@ -627,7 +619,7 @@ void Settings::setIconsSize(int v) {
 void Settings::updateLocale()
 {
     // Load a translation file for the program.
-    translator.load(translations[locale.language()][locale.country()]);
+    [[maybe_unused]] bool loaded = translator.load(translations[locale.language()][static_cast<int>(locale.territory())]);
     // Load a translation file for Qt library.
-    qtranslator.load(qtTranslations[locale.language()][locale.country()]);
+    [[maybe_unused]] bool loaded = qtranslator.load(qtTranslations[locale.language()][locale.territory()]);
 }

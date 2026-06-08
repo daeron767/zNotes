@@ -54,7 +54,7 @@ QWidget* PictureNote::widget()
 void PictureNote::copy() const
 {
 	QClipboard* clipboard = QApplication::clipboard();
-	clipboard->setPixmap(*label->pixmap());
+        clipboard->setPixmap(label->pixmap());
 }
 
 bool PictureNote::isDocumentSupported() const

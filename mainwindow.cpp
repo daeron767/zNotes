@@ -140,20 +140,20 @@ MainWindow::MainWindow(QWidget *parent)
         connect(Shared::shortcuts().last(), SIGNAL(activated()), actions[itemSearch], SLOT(toggle()));
     Shared::addShortcut(new QShortcut(Qt::Key_Escape, ui->edSearch, 0, 0, Qt::WidgetShortcut));
         connect(Shared::shortcuts().last(), SIGNAL(activated()), actions[itemSearch], SLOT(toggle()));
-    Shared::addShortcut(new QShortcut(Qt::CTRL + Qt::Key_Q, this), tr("Exit program"));
+    Shared::addShortcut(new QShortcut(Qt::CTRL | Qt::Key_Q, this), tr("Exit program"));
         connect(Shared::shortcuts().last(), SIGNAL(activated()), qApp, SLOT(quit()));
     Shared::addShortcut(new QShortcut(QKeySequence::Bold, this), tr("Make selected text bold"));
         connect(Shared::shortcuts().last(), SIGNAL(activated()), this, SLOT(formatBold()));
     Shared::addShortcut(new QShortcut(QKeySequence::Italic, this), tr("Make selected text italic"));
         connect(Shared::shortcuts().last(), SIGNAL(activated()), this, SLOT(formatItalic()));
-    Shared::addShortcut(new QShortcut(Qt::CTRL + Qt::Key_S, this), tr("Make selected text strikeout"));
+    Shared::addShortcut(new QShortcut(Qt::CTRL | Qt::Key_S, this), tr("Make selected text strikeout"));
         connect(Shared::shortcuts().last(), SIGNAL(activated()), this, SLOT(formatStrikeout()));
     Shared::addShortcut(new QShortcut(QKeySequence::Underline, this), tr("Make selected text underline"));
         connect(Shared::shortcuts().last(), SIGNAL(activated()), this, SLOT(formatUnderline()));
 
     for(int i=1; i<=9; ++i) //from Alt+1 to Alt+9
     {
-        QShortcut* shortcut = new QShortcut(QKeySequence(Qt::ALT + Qt::Key_0+i), this);
+        QShortcut* shortcut = new QShortcut(QKeySequence(Qt::ALT | Qt::Key_0+i), this);
         connect(shortcut, SIGNAL(activated()), &alt_mapper, SLOT(map()));
         alt_mapper.setMapping(shortcut, i-1);
     }

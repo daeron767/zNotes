@@ -3,6 +3,7 @@
 
 #include <QPalette>
 #include <QMimeData>
+#include <QIODevice>
 
 #define NOTE_TOOLBAR_ITEM_MIME "application/znotes.toolbar_item"
 #define NOTE_TOOLBAR_ITEM_USED_MIME "application/znotes.toolbar_item_used"

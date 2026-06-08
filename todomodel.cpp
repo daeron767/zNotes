@@ -11,11 +11,11 @@ Task::Task(QDomDocument* document, QDomNode &node, int row, Task* parent)
 	QDomElement element = _node.toElement();
 	if(!element.isNull())
 	{
-		if(element.attributes().contains("time_a")) _date_start = QDateTime::fromTime_t(element.attribute("time_a").toInt());
-		if(element.attributes().contains("time_l")) _date_limit = QDateTime::fromTime_t(element.attribute("time_l").toInt());
+		if(element.attributes().contains("time_a")) _date_start = QDateTime::fromSecsSinceEpoch(element.attribute("time_a").toInt());
+		if(element.attributes().contains("time_l")) _date_limit = QDateTime::fromSecsSinceEpoch(element.attribute("time_l").toInt());
 		if(element.attributes().contains("time_d"))
 		{
-			_date_stop = QDateTime::fromTime_t(element.attribute("time_d").toInt());
+			_date_stop = QDateTime::fromSecsSinceEpoch(element.attribute("time_d").toInt());
 			_done = true;
 		}
 		if(element.attributes().contains("priority"))
@@ -99,19 +99,19 @@ void Task::setComment(const QString& v)
 void Task::setDateStart(const QDateTime& v)
 {
 	_date_start = v;
-	_node.toElement().setAttribute("time_a", _date_start.toTime_t());
+	_node.toElement().setAttribute("time_a", _date_start.toSecsSinceEpoch());
 }
 
 void Task::setDateStop(const QDateTime& v)
 {
 	_date_stop = v;
-	_node.toElement().setAttribute("time_d", _date_stop.toTime_t());
+	_node.toElement().setAttribute("time_d", _date_stop.toSecsSinceEpoch());
 }
 
 void Task::setDateLimit(const QDateTime& v)
 {
 	_date_limit = v;
-	_node.toElement().setAttribute("time_l", _date_limit.toTime_t());
+	_node.toElement().setAttribute("time_l", _date_limit.toSecsSinceEpoch());
 }
 
 void Task::setDone(bool v)
@@ -163,7 +163,7 @@ QDomDocument*  TodoModel::load(QFile& file)
 		 _document->appendChild(_document->createProcessingInstruction("xml", "version='1.0' encoding='UTF-8'"));
 
 		QDomElement elem = _document->createElement("ztodo");
-		elem.setAttribute("version", VERSION);
+		elem.setAttribute("version", APP_VERSION);
 		_document->appendChild(elem);
 	}
 
@@ -232,9 +232,9 @@ QMimeData* TodoModel::mimeData(const QModelIndexList& indexes) const
 		Task* task = getTask(index);
 		stream << task->title();
 		stream << task->comment();
-		stream << task->dateStart().toTime_t();
-		stream << task->dateStop().toTime_t();
-		stream << task->dateLimit().toTime_t();
+		stream << task->dateStart().toSecsSinceEpoch();
+		stream << task->dateStop().toSecsSinceEpoch();
+		stream << task->dateLimit().toSecsSinceEpoch();
 		stream << task->done();
 		stream << int(task->priority());
 //		if (index.isValid())
@@ -273,9 +273,9 @@ bool TodoModel::dropMimeData(const QMimeData* data, Qt::DropAction action, int r
 				>> done >> priority;
 		task->setTitle(title);
 		task->setComment(comment);
-		task->setDateStart(QDateTime::fromTime_t(date_start_ts));
-		if(done) task->setDateStop(QDateTime::fromTime_t(date_stop_ts));
-		if(date_limit_ts) task->setDateLimit(QDateTime::fromTime_t(date_limit_ts));
+		task->setDateStart(QDateTime::fromSecsSinceEpoch(date_start_ts));
+		if(done) task->setDateStop(QDateTime::fromSecsSinceEpoch(date_stop_ts));
+		if(date_limit_ts) task->setDateLimit(QDateTime::fromSecsSinceEpoch(date_limit_ts));
 		task->setPriority(Task::Priority(priority));
 		return true;
 	}
@@ -500,26 +500,13 @@ void TodoProxyModel::hideDoneTasks(bool hide)
 	emit filterChanged();
 }
 
-bool TodoProxyModel::filterAcceptsRow (int source_row, const QModelIndex& source_parent) const
+bool TodoProxyModel::filterAcceptsRow(int source_row, const QModelIndex &source_parent) const
 {
-	if(hide_done_tasks)
-	{
-//		qDebug() << __LINE__;
-		//тут херятся первые строки =(
-		QModelIndex source_index = source_parent.isValid() ?
-			source_parent.child(source_row, 0) :
-			sourceModel()->index(0,0).child(source_row, 0);
-//		qDebug() << __LINE__;
-		//
-//		qDebug() << source_index.isValid() << source_index.data(Qt::CheckStateRole).toBool() << source_index.data().toString();
-		//
-		if(source_index.isValid())
-		{
-//			qDebug() << __LINE__;
-			bool done = source_index.data(Qt::CheckStateRole).toBool();
-//			qDebug() << __LINE__;
-			if(done) return false;
-		}
-	}
-	return true;
+    QModelIndex source_index = sourceModel()->index(source_row, 0, source_parent);
+    if (!source_index.isValid())
+        return false;
+    bool done = source_index.data(Qt::CheckStateRole).toBool();
+    if (hide_done_tasks && done)
+        return false;
+    return QSortFilterProxyModel::filterAcceptsRow(source_row, source_parent);
 }

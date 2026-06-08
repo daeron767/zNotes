@@ -113,7 +113,7 @@ bool HighlightRuleModel::setData(const QModelIndex& index, const QVariant& value
 
 Qt::ItemFlags HighlightRuleModel::flags(const QModelIndex& index) const
 {
-	if(!index.isValid()) return 0;
+	if(!index.isValid()) return Qt::NoItemFlags;
 	switch(index.column())
 	{
 		case 0: return  Qt::ItemIsDragEnabled|Qt::ItemIsSelectable|Qt::ItemIsEnabled|Qt::ItemIsUserCheckable|Qt::ItemIsEditable;

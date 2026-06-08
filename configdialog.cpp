@@ -86,7 +86,7 @@ configDialog::configDialog(QWidget *parent) :
 			QLocale locale(language, country);
 			QString text = QString("%1 (%2)").
 				arg(QLocale::languageToString(language)).
-				arg(QLocale::countryToString(country));
+                                arg(QLocale::territoryToString(country));
 			m_ui->cmb_Language->addItem(text, locale);
 		}
 	}

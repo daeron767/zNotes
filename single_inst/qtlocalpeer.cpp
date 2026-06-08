@@ -41,6 +41,7 @@
 #include "qtlocalpeer.h"
 #include <QtCore/QCoreApplication>
 #include <QtCore/QTime>
+#include <QRegularExpression>
 
 #if QT_VERSION >= 0x050000
 #include <QtCore/QDataStream>
@@ -66,6 +67,7 @@ namespace QtLP_Private {
 #include "qtlockedfile_unix.cpp"
 #endif
 }
+#include <QRegExp>
 
 const char* QtLocalPeer::ack = "ack";
 
@@ -80,11 +82,11 @@ QtLocalPeer::QtLocalPeer(QObject* parent, const QString &appId)
 #endif
 		prefix = id.section(QLatin1Char('/'), -1);
 	}
-	prefix.remove(QRegExp("[^a-zA-Z]"));
+        prefix.remove(QRegularExpression("[^a-zA-Z]"));
 	prefix.truncate(6);
 
 	QByteArray idc = id.toUtf8();
-	quint16 idNum = qChecksum(idc.constData(), idc.size());
+	quint16 idNum = qChecksum(QByteArrayView(idc));
 	socketName = QLatin1String("qtsingleapp-") + prefix
 				 + QLatin1Char('-') + QString::number(idNum, 16);
 

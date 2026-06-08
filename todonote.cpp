@@ -163,7 +163,7 @@ void TodoNote::load()
 	file.close();
 	if(!file.exists())
 	{
-		file.open(QIODevice::WriteOnly);
+                [[maybe_unused]] bool opened = file.open(QIODevice::WriteOnly);
 		file.close();
 	}
 	if(file.open(QIODevice::ReadOnly))
@@ -229,7 +229,7 @@ void TodoNote::insertSubTask()
 	int row = model->rowCount(index);
 	model->insertRow(row, index);
 	//Setting current index to created task
-	QModelIndex child_index = index.child(row, 0);
+        QModelIndex child_index = index.model()->index(row, 0, index);
 	proxy_index = proxy_model->mapFromSource(child_index);
 	tree_view->setCurrentIndex(proxy_index);
     contentChanged();

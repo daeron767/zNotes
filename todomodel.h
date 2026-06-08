@@ -109,6 +109,8 @@ public:
 	void hideDoneTasks(bool hide = true);
 private:
 	bool hide_done_tasks;
+signals:
+    void filterChanged();
 };
 
 #endif // TODOMODEL_H
