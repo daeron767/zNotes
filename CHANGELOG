@@ -1,3 +1,13 @@
+zNotes 0.5.0
+* Ported source to Qt6, added new tools available from Preferences
+* Added scope features to Search function
+* Added Lock tool to avoid accidential edits
+* Added html note Serif tool switching text from default sans-serif to serif
+* Added html note text Size tool
+* Added text Zoom (Ctrl+,Ctrl-) to adjust text display size temporarily
+* Esc key dismisses zNotes to system tray
+* Changed Remove tool to soft-delete, backed up for 7 days before deletion
+
 zNotes 0.4.8:
 * Added Dutch translation
 
