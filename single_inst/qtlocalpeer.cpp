@@ -67,7 +67,7 @@ namespace QtLP_Private {
 #include "qtlockedfile_unix.cpp"
 #endif
 }
-#include <QRegExp>
+#include <QRegularExpression>
 
 const char* QtLocalPeer::ack = "ack";
 

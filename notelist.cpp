@@ -1,10 +1,3 @@
-#include <QFileSystemWatcher>
-#include <QFileDialog>
-#include <QInputDialog>
-#include <QMessageBox>
-#include <QPrinter>
-#include <QTextEdit>
-
 #include "notelist.h"
 #include "settings.h"
 
@@ -15,91 +8,100 @@
     #include "todonote.h"
 #endif
 #ifdef NOTE_XML_FORMAT
-	#include "note_xml.h"
+    #include "note_xml.h"
 #endif
 
-NoteList::NoteList(QWidget* parent)
-    : QObject(),
+#include <QDateTime>
+#include <QDir>
+#include <QFileDialog>
+#include <QFileInfo>
+#include <QFileSystemWatcher>
+#include <QInputDialog>
+#include <QMessageBox>
+#include <QSettings>
+#include <QTextCursor>
+#include <QTextEdit>
+
+NoteList::NoteList(QWidget *parent)
+    : QObject(parent),
       FILE_WITH_CURSOR_POSITIONS(".znotes_cursor_positions"),
-      vec(),
-      history_index(0),
-      history_forward_pressed(false),
-      history_back_pressed(false),
-      current_index(-1)
+      parentWidget(parent)
 {
     initNoteTypes();
-
     tabs = new ZTabWidget(parent);
     tabs->setDocumentMode(true);
-    tabs->setTabPosition(QTabWidget::TabPosition(settings.getTabPosition()));
-
-    // Setting and testing directory
+    tabs->setTabPosition(static_cast<QTabWidget::TabPosition>(settings.getTabPosition()));
+    // Directory configuration
     dir.setPath(settings.getNotesPath());
-    if(!dir.exists())
-        if(!dir.mkpath(dir.path()))
+    if (!dir.exists())
+    {
+        if (!dir.mkpath(dir.path()))
             dir.setPath("");
+    }
     while (dir.path().isEmpty())
     {
-        dir.setPath(QFileDialog::getExistingDirectory(
-                        0,
-                        tr("Select place for notes directory"),
-                        QDir::homePath(),
-                        QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks));
-        if(!dir.path().isEmpty())
+        QString selected = QFileDialog::getExistingDirectory(
+            nullptr,
+            tr("Select place for notes directory"),
+            QDir::homePath(),
+            QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+        if (!selected.isEmpty())
         {
-            QString newPath = QDir(dir.path() + '/' + tr("Notes")).absolutePath();
+            QString newPath = QDir(selected + '/' + tr("Notes")).absolutePath();
             settings.setNotesPath(newPath);
-            if(!dir.exists())
-                if(!dir.mkpath(dir.path()))
+            dir.setPath(newPath);
+            if (!dir.exists())
+            {
+                if (!dir.mkpath(dir.path()))
                     dir.setPath("");
-            if(!dir.isReadable())
+            }
+            if (!dir.isReadable())
                 dir.setPath("");
         }
     }
-
-    // Make a dictionary with cursor positions.
-    QFile cursorPositionFile(QString("%1/%2").arg(dir.absolutePath())
-                             .arg(FILE_WITH_CURSOR_POSITIONS));
+    // Cursor positions
+    QFile cursorPositionFile(dir.filePath(FILE_WITH_CURSOR_POSITIONS));
     QMap<QString, int> noteCursorPositions;
-    int position;
-    if (cursorPositionFile.exists() == true) {
-        QSettings cursorPositionSettings(cursorPositionFile.fileName(), QSettings::IniFormat);
-        cursorPositionSettings.beginGroup("Positions");
-        // Get all keys in current group.
-        QStringList keys = cursorPositionSettings.childKeys();
-        QStringList::const_iterator constIterator;
-        for (constIterator = keys.constBegin(); constIterator != keys.constEnd(); ++constIterator) {
-            position = cursorPositionSettings.value((*constIterator), 0).toInt();
-            noteCursorPositions[(*constIterator)] = position;
+    if (cursorPositionFile.exists())
+    {
+        QSettings cursorSettings(cursorPositionFile.fileName(), QSettings::IniFormat);
+        cursorSettings.beginGroup("Positions");
+        const QStringList keys = cursorSettings.childKeys();
+        for (const QString &key : keys)
+        {
+            noteCursorPositions[key] = cursorSettings.value(key, 0).toInt();
         }
-        cursorPositionSettings.endGroup();
+        cursorSettings.endGroup();
     }
-
-    // Loading list of files
-    if(settings.getShowHidden())
-        dir.setFilter(QDir::Files | QDir::Hidden | QDir::Readable);
-    else
-        dir.setFilter(QDir::Files | QDir::Readable);
+    // Load initial files
+    dir.setFilter(settings.getShowHidden() ? (QDir::Files | QDir::Hidden | QDir::Readable)
+                                           : (QDir::Files | QDir::Readable));
     QFileInfoList flist = dir.entryInfoList();
     const QString &last_note_title = settings.getLastNote();
     int old_index = -1;
-    QTextEdit *editor;
-    for (int i = 0; i < flist.size(); ++i) {
-        // Check a file for cursor positions
-        if (flist.at(i).fileName() == FILE_WITH_CURSOR_POSITIONS)
+    for (int i = 0; i < flist.size(); ++i)
+    {
+        QString fileName = flist.at(i).fileName();
+        if (fileName == FILE_WITH_CURSOR_POSITIONS || 
+            fileName.endsWith(QStringLiteral(".bk"), Qt::CaseInsensitive))
+        {
             continue;
-        // Loading a note
-        Note* note = this->add(flist.at(i), false);
-        if (old_index== -1 && note->fileName() == last_note_title)
+        }
+        Note *note = this->add(flist.at(i), false);
+        if (old_index == -1 && note->fileName() == last_note_title)
+        {
             old_index = i;
-        if (note->widget()) {
-            editor = qobject_cast<QTextEdit*>(note->widget());
-            if (editor) {
-                if (noteCursorPositions.contains(note->fileName())) {
-                    position = noteCursorPositions[note->fileName()];
-                    QTextCursor textCursor = editor->textCursor();
-                    textCursor.setPosition(position);
-                    editor->setTextCursor(textCursor);
+        }
+        if (note->widget())
+        {
+            if (auto *editor = qobject_cast<QTextEdit*>(note->widget()))
+            {
+                if (noteCursorPositions.contains(note->fileName()))
+                {
+                    int pos = noteCursorPositions[note->fileName()];
+                    QTextCursor cursor = editor->textCursor();
+                    cursor.setPosition(pos);
+                    editor->setTextCursor(cursor);
                     editor->ensureCursorVisible();
                 }
             }
@@ -107,31 +109,31 @@ NoteList::NoteList(QWidget* parent)
     }
     if (old_index != -1)
         tabs->setCurrentIndex(old_index);
-    else if(empty())
+    else if (empty())
         create(Note::type_html);
     current_index = tabs->currentIndex();
-    tabs->currentWidget()->setFocus();
-
-    //
+    if (tabs->currentWidget())
+    {
+        tabs->currentWidget()->setFocus();
+    }
     watcher = new QFileSystemWatcher(this);
     watcher->addPath(dir.absolutePath());
-
-    connect(tabs, SIGNAL(currentChanged(int)), this, SLOT(currentTabChanged(int)));
-    connect(&settings, SIGNAL(ShowExtensionsChanged(bool)), this, SLOT(showExtensionsChanged(bool)));
-    connect(&settings, SIGNAL(TabPositionChanged()), this, SLOT(tabPositionChanged()));
-    connect(&settings, SIGNAL(NotesPathChanged()), this, SLOT(notesPathChanged()));
-    connect(&settings, SIGNAL(ShowHiddenChanged()), this, SLOT(scanForNewFiles()));
-    connect(watcher, SIGNAL(directoryChanged(QString)), this, SLOT(scanForNewFiles()));
-
-    connect(tabs, SIGNAL(tabBarDoubleClickedOnTab(int)), this, SLOT(changeNoteName(int)));
-
-    // Save a parent widget pointer.
-    parentWidget = parent;
+    // PMF Signal/Slot connections
+    connect(tabs, &QTabWidget::currentChanged, this, &NoteList::currentTabChanged);
+    connect(&settings, &Settings::ShowExtensionsChanged, this, &NoteList::showExtensionsChanged);
+    connect(&settings, &Settings::TabPositionChanged, this, &NoteList::tabPositionChanged);
+    connect(&settings, &Settings::NotesPathChanged, this, &NoteList::notesPathChanged);
+    connect(&settings, &Settings::ShowHiddenChanged, this, &NoteList::scanForNewFiles);
+    connect(watcher, &QFileSystemWatcher::fileChanged, this, &NoteList::fileModifiedExternally);
+    connect(watcher, &QFileSystemWatcher::directoryChanged, this, &NoteList::scanForNewFiles);
+    connect(tabs, &ZTabWidget::tabBarDoubleClickedOnTab, this, &NoteList::changeNoteName);
 }
 
 NoteList::~NoteList()
 {
     tabs->clear();
+    qDeleteAll(vec);
+    vec.clear();
 }
 
 void NoteList::initNoteTypes()
@@ -140,10 +142,10 @@ void NoteList::initNoteTypes()
                  QObject::tr("Simple text Note"), ":/res/note_types/txt.png",
                  ":/res/note_types/16/txt.png", "txt,");
     registerType(Note::type_html, QObject::tr("HTML Note"),
-                 QObject::tr("Simple Note with text formating"), ":/res/note_types/html.png",
+                 QObject::tr("Simple Note with text formatting"), ":/res/note_types/html.png",
                  ":/res/note_types/16/html.png", "html,htm");
     registerType(Note::type_picture, QObject::tr("Picture Note"), QObject::tr("Simple text Note"),
-                 ":/res/note_types/pic.png", ":/res/note_types/16/pic.png", "png,jpeg,jpg,png,gif",
+                 ":/res/note_types/pic.png", ":/res/note_types/16/pic.png", "png,jpeg,jpg,gif",
                  false);
 #ifdef NOTE_TODO_FORMAT
     registerType(Note::type_todo, QObject::tr("TODO Note"), QObject::tr("Simple TODO list"),
@@ -156,33 +158,38 @@ void NoteList::initNoteTypes()
 }
 
 void NoteList::registerType(Note::Type id,
-                            const QString& title,
-                            const QString& description,
-                            const QString& big_icon_path,
-                            const QString& small_icon_path,
-                            const QString extensions,
-                            bool visible)
+                             const QString &title,
+                             const QString &description,
+                             const QString &big_icon_path,
+                             const QString &small_icon_path,
+                             const QString &extensions,
+                             bool visible)
 {
-	note_types[id] = NoteType(id, title, description, big_icon_path, small_icon_path, extensions, visible);
-    foreach(const QString& extension, note_types[id].extensions())
-        NOTE_TYPE_MAP[extension] = id;
+    note_types[id] = NoteType(id, title, description, big_icon_path, small_icon_path, extensions, visible);
+    for (const QString &ext : note_types[id].extensions())
+    {
+        NOTE_TYPE_MAP[ext] = id;
+    }
 }
 
 void NoteList::scanForNewFiles()
 {
-    if (settings.getShowHidden()) {
-        dir.setFilter(QDir::Files | QDir::Hidden | QDir::Readable);
-    } else {
-        dir.setFilter(QDir::Files | QDir::Readable);
-    }
-	dir.refresh();
-	QFileInfoList flist = dir.entryInfoList();
-    for (int i = 0; i < flist.size(); ++i)
-	{
-        // Loading note
-        const QString &filename = flist.at(i).fileName();
-        if (!notes_filenames.contains(filename))
-            add(flist.at(i));
+    dir.setFilter(settings.getShowHidden() ? (QDir::Files | QDir::Hidden | QDir::Readable)
+                                           : (QDir::Files | QDir::Readable));
+    dir.refresh();
+    const QFileInfoList flist = dir.entryInfoList();
+    for (const QFileInfo &fi : flist)
+    {
+        QString fileName = fi.fileName();
+        if (fileName == FILE_WITH_CURSOR_POSITIONS ||
+           fileName.endsWith(QStringLiteral(".bk"), Qt::CaseInsensitive))
+        {
+            continue;
+        }
+        if (!notes_filenames.contains(fi.fileName()))
+        {
+            add(fi);
+        }
     }
 }
 
@@ -192,311 +199,371 @@ void NoteList::changeNoteName(int tabIndex)
     renameCurrentNote();
 }
 
-Note::Type NoteList::getType(const QFileInfo& fileinfo) const
+Note::Type NoteList::getType(const QFileInfo &fileinfo) const
 {
-	return NOTE_TYPE_MAP[fileinfo.suffix().toLower()];
+    return NOTE_TYPE_MAP.value(fileinfo.suffix().toLower(), Note::type_text);
 }
 
-void NoteList::create(Note::Type type, const QString& name)
+void NoteList::create(Note::Type type, const QString &name)
 {
-    QString extension = noteTypes()[type].defaultExtension();
-    QString filename = QString("%1.%2").arg(name.isEmpty() ? "0": name).arg(extension);
-    QFile file(dir.absoluteFilePath(filename));
+    const QString extension = noteTypes()[type].defaultExtension();
+    QString filename = QString("%1.%2").arg(name.isEmpty() ? "0" : name, extension);
+    QFile file(dir.filePath(filename));
     int n = 0;
-    while(file.exists()) //Searching for free filename
+    while (file.exists())
     {
         filename = QString("%1.%2").arg(++n).arg(extension);
-        file.setFileName(dir.absoluteFilePath(filename));
+        file.setFileName(dir.filePath(filename));
     }
-    add(QFileInfo(file));        // ← FIXED LINE
+    add(QFileInfo(file));
 }
 
-Note* NoteList::add(const QFileInfo& fileinfo, bool set_current)
+Note* NoteList::add(const QFileInfo &fileinfo, bool set_current)
 {
-	Note* note;
-	Note::Type type = getType(fileinfo);
+    Note *note = nullptr;
+    Note::Type type = getType(fileinfo);
     switch (type)
-	{
+    {
         case Note::type_text:
-          note = new TextNote(fileinfo, type);
-          break;
-
+            note = new TextNote(fileinfo, type, this);
+            break;
         case Note::type_html:
-          note = new HtmlNote(fileinfo, type);
-          break;
-
+            note = new HtmlNote(fileinfo, type, this);
+            break;
         case Note::type_picture:
-          note = new PictureNote(fileinfo, type);
-          break;
-
+            note = new PictureNote(fileinfo, type, this);
+            break;
 #ifdef NOTE_TODO_FORMAT
         case Note::type_todo:
-          note = new TodoNote(fileinfo, type);
-          break;
+            note = new TodoNote(fileinfo, type, this);
+            break;
 #endif
 #ifdef NOTE_XML_FORMAT
         case Note::type_xml:
-          note = new XmlNote(fileinfo, type);
-          break;
+            note = new XmlNote(fileinfo, type, this);
+            break;
 #endif
         default:
-          note = new TextNote(fileinfo, type);
-          break;
-	}
-
-	vec.append(note);
-	tabs->addTab(note->widget(), note->title());
-	notes_filenames.insert(fileinfo.fileName());
-    if (set_current) {
+            note = new TextNote(fileinfo, type, this);
+            break;
+    }
+    vec.append(note);
+    tabs->addTab(note->widget(), note->title());
+    notes_filenames.insert(fileinfo.fileName());
+    if (set_current)
+    {
         tabs->setCurrentWidget(note->widget());
     }
-	return note;
+    return note;
 }
 
 void NoteList::remove(int i)
 {
-	disconnect(tabs, SIGNAL(currentChanged(int)), this, SLOT(currentTabChanged(int)));
-	Note* note = vec.takeAt(i);
-	tabs->removeTab(i);
-	QString filename = note->fileName();
-	note->deleteLater();
-	current_index = tabs->currentIndex();
-	connect(tabs, SIGNAL(currentChanged(int)), this, SLOT(currentTabChanged(int)));
-	emit currentNoteChanged(-1, current_index);
-	notes_filenames.remove(filename);
+    if (i < 0 || i >= vec.size())
+        return;
+    disconnect(tabs, &QTabWidget::currentChanged, this, &NoteList::currentTabChanged);
+    Note *note = vec.takeAt(i);
+    tabs->removeTab(i);
+    if (note) {
+        QString filename = note->fileName();
+        // Construct full path using settings notes path if filename is relative
+        QFileInfo info(filename);
+        if (info.isRelative()) {
+            info.setFile(settings.getNotesPath(), filename);
+        }
+        QString filePath = info.absoluteFilePath();
+        if (!filePath.isEmpty() && QFile::exists(filePath)) {
+            QString backupPath = filePath + QStringLiteral(".bk");
+            // Overwrite any existing older backup file of the same name
+            if (QFile::exists(backupPath)) {
+                QFile::remove(backupPath);
+            }
+            // Soft-delete: rename to .bk
+            if (QFile::rename(filePath, backupPath)) {
+                // Touch file to update modification timestamp for retention purging
+                QFile backupFile(backupPath);
+                if (backupFile.open(QIODevice::ReadWrite)) {
+                    backupFile.close();
+                }
+            }
+        }
+        note->deleteLater();
+        notes_filenames.remove(filename);
+    }
+    current_index = tabs->currentIndex();
+    connect(tabs, &QTabWidget::currentChanged, this, &NoteList::currentTabChanged);
+    emit currentNoteChanged(-1, current_index);
 }
 
 void NoteList::move(const QString &newPath, const QString &oldPath)
 {
-	Note* note;
-	foreach (note, vec)
+    for (Note *note : vec)
+    {
         note->move(newPath);
-    // Delete a cursor position file from previous notes' directory.
-    QFile cursorPositionFile(QString("%1/%2").arg(oldPath)
-                             .arg(FILE_WITH_CURSOR_POSITIONS));
-    if (cursorPositionFile.exists() == true)
+    }
+    QFile cursorPositionFile(QDir(oldPath).filePath(FILE_WITH_CURSOR_POSITIONS));
+    if (cursorPositionFile.exists())
+    {
         cursorPositionFile.remove();
+    }
 }
 
-void NoteList::search(const QString& text)
+void NoteList::fileModifiedExternally(const QString &path)
 {
-    //Searching in current note
-    if(current()->find(text)) return;
-	//Searching in all notes
-	const int max = count()+currentIndex();
-	for(int n=currentIndex()+1; n<=max; ++n)
-	{
-        int i = n%vec.size(); //secret formula of success search
-		if(vec[i]->find(text, true))
-        {
-			tabs->setCurrentIndex(i);
-			return;
-		}
-	}
-	//If find nothing
-	//current()->widget()->setFocus();
+    // Reload the modified note buffer if it matches an open note
+    for (int i = 0; i < count(); ++i) {
+        if (Note *note = get(i)) {
+            if (QFileInfo(note->absolutePath()) == QFileInfo(path)) {
+                note->load(); // Reloads content from disk
+                break;
+            }
+        }
+    }
+}
+
+bool NoteList::find(const QString &text, QTextDocument::FindFlags flags, bool wrap)
+{
+    Note *note = current();
+    if (!note)
+        return false;
+    // Delegate directly to the current note's unified find function
+    return note->find(text, flags, wrap);
+}
+
+int NoteList::findAll(const QString &text, QTextDocument::FindFlags flags)
+{
+    int matchCount = 0;
+    Qt::CaseSensitivity cs = (flags & QTextDocument::FindCaseSensitively) 
+                             ? Qt::CaseSensitive 
+                             : Qt::CaseInsensitive;
+    for (Note *note : vec) {
+        if (!note || !note->widget()) 
+            continue;
+        // Retrieve text editor widget from note to check plaintext content
+        if (auto *editor = qobject_cast<QTextEdit*>(note->widget())) {
+            if (editor->toPlainText().contains(text, cs)) {
+                matchCount++;
+            }
+        }
+    }
+    return matchCount;
+}
+
+bool NoteList::findInCurrent(const QString &text, QTextDocument::FindFlags flags, bool wrap)
+{
+    if (Note *currentNote = current()) {
+        bool found = currentNote->find(text, flags, wrap);
+        if (found && currentNote->widget()) {
+            currentNote->widget()->setFocus();
+        }
+        return found;
+    }
+    return false;
+}
+
+bool NoteList::findNextGlobal(const QString &text, QTextDocument::FindFlags flags)
+{
+    if (text.isEmpty() || vec.isEmpty())
+        return false;
+
+    // First try searching forward in the current note
+    if (Note *cur = current()) {
+        if (cur->find(text, flags, false)) {
+            if (cur->widget()) cur->widget()->setFocus();
+            return true;
+        }
+    }
+    // If current note has no more matches, cycle through remaining notes
+    int startIdx = currentIndex();
+    int count = vec.size();
+    for (int i = 1; i < count; ++i) {
+        int targetIdx = (startIdx + i) % count;
+        Note *note = vec.at(targetIdx);
+        if (!note || !note->widget())
+            continue;
+        // Reset cursor to start of note for forward search
+        if (auto *editor = qobject_cast<QTextEdit*>(note->widget())) {
+            QTextCursor cursor = editor->textCursor();
+            cursor.movePosition(QTextCursor::Start);
+            editor->setTextCursor(cursor);
+        }
+        if (note->find(text, flags, false)) {
+            setCurrent(targetIdx); // Switch to matching tab
+            note->widget()->setFocus();
+            return true;
+        }
+    }
+    return false;
+}
+
+bool NoteList::findPrevGlobal(const QString &text, QTextDocument::FindFlags flags)
+{
+    if (text.isEmpty() || vec.isEmpty())
+        return false;
+    // First try searching backward in current note
+    if (Note *cur = current()) {
+        if (cur->find(text, flags, false)) {
+            if (cur->widget()) cur->widget()->setFocus();
+            return true;
+        }
+    }
+
+    // If no previous matches in current note, cycle backward through other notes
+    int startIdx = currentIndex();
+    int count = vec.size();
+    for (int i = 1; i < count; ++i) {
+        int targetIdx = (startIdx - i + count) % count;
+        Note *note = vec.at(targetIdx);
+        if (!note || !note->widget())
+            continue;
+        // Reset cursor to end of note for backward search
+        if (auto *editor = qobject_cast<QTextEdit*>(note->widget())) {
+            QTextCursor cursor = editor->textCursor();
+            cursor.movePosition(QTextCursor::End);
+            editor->setTextCursor(cursor);
+        }
+        if (note->find(text, flags, false)) {
+            setCurrent(targetIdx); // Switch to matching tab
+            note->widget()->setFocus();
+            return true;
+        }
+    }
+    return false;
+}
+
+void NoteList::highlightInCurrent(const QString &text, QTextDocument::FindFlags flags)
+{
+    if (Note *currentNote = current()) {
+        currentNote->highlightAll(text, flags);
+    }
 }
 
 void NoteList::removeCurrentNote()
 {
-	Note* note = current();
-	if(!note) return;
+    Note *note = current();
+    if (!note)
+        return;
     QMessageBox msgBox(QMessageBox::Question,
                        tr("Delete Note"),
-                       tr("Do you really want to delete note %1 ?").arg(note->title()),
+                       tr("Do you really want to delete note %1?").arg(note->title()),
                        QMessageBox::Yes | QMessageBox::No,
                        parentWidget);
-	int ret = msgBox.exec();
-	if(ret == QMessageBox::Yes)
-	{
-		remove(currentIndex());
-	}
+    if (msgBox.exec() == QMessageBox::Yes)
+    {
+        remove(currentIndex());
+    }
 }
 
 void NoteList::renameCurrentNote()
 {
-	if(empty()) return;
-	Note* note = current();
-	if(!note) return;
-	bool ok;
-
-	int typedot = note->fileName().lastIndexOf(".");
-	QString filename = note->fileName();
-	QString extension;
-	if(typedot != -1)
-	{
-		// Specify size to keep it backwards compitable with Qt >4.7
-		extension = QString(&note->fileName().data()[typedot], note->fileName().length() - typedot);
-		filename.truncate(typedot);
-	}
-
+    if (empty())
+        return;
+    Note *note = current();
+    if (!note)
+        return;
+    bool ok = false;
+    const QString fname = note->fileName();
+    int typedot = fname.lastIndexOf('.');
+    QString filename = fname;
+    QString extension;
+    if (typedot != -1)
+    {
+        extension = fname.mid(typedot);
+        filename.truncate(typedot);
+    }
     QString new_name = QInputDialog::getText(parentWidget,
                                              tr("Rename note"),
                                              tr("New name:"),
-                                             QLineEdit::Normal, filename,  &ok);
-	if(ok && !new_name.isEmpty())
-	{
-		new_name.append(extension);
-		QFile file(dir.absoluteFilePath(new_name));
-        if(!file.exists())
+                                             QLineEdit::Normal,
+                                             filename,
+                                             &ok);
+    if (ok && !new_name.isEmpty())
+    {
+        new_name.append(extension);
+        QFile file(dir.filePath(new_name));
+        if (!file.exists())
+        {
             rename(current_index, new_name);
-		else
-		{
+        }
+        else
+        {
             QMessageBox::information(parentWidget,
                                      tr("Note renaming"),
                                      tr("Note %1 already exists!").arg(new_name));
-		}
-	}
+        }
+    }
 }
 
-void NoteList::rename(int index, const QString& title)
+void NoteList::rename(int index, const QString &title)
 {
-	Note* note = vec.at(index);
-	note->save();
-	notes_filenames.remove(note->fileName());
-	note->rename(title);
-	tabs->setTabText(index, note->title());
-	notes_filenames.insert(note->fileName());
+    if (index < 0 || index >= vec.size())
+        return;
+    Note *note = vec.at(index);
+    note->save();
+    notes_filenames.remove(note->fileName());
+    note->rename(title);
+    tabs->setTabText(index, note->title());
+    notes_filenames.insert(note->fileName());
 }
 
 void NoteList::currentTabChanged(int index)
 {
-    if (index==-1)
+    if (index == -1)
         return;
-    if (current_index != -1) {
-        if(current()) {
-            current()->save();
+    if (current_index != -1 && current())
+    {
+        current()->save();
+        if (tabs->currentWidget())
+        {
             tabs->currentWidget()->setFocus();
         }
     }
-	int old_index = current_index;
-	current_index = index;
-	const QString path = vec[current_index]->absolutePath();
-	//
-	if(history_forward_pressed)
-	{
-		history_forward_pressed = false;
-		if(history_index>0)
-		{
-			for(int i=history_index+1; i<history.size(); ++i)
-			{
-				if(path==history.at(i))
-				{
-					history_index = i;
-					break;
-				}
-			}
-		}
-	}
-	else if(history_back_pressed)
-	{
-		history_back_pressed = false;
-		if(history_index>0)
-		{
-			for(int i=history_index-1; i>=0; --i)
-			{
-				if(path==history.at(i))
-				{
-					history_index = i;
-					break;
-				}
-			}
-		}
-	}
-	else
-	{
-		if((history.size()==0) && (old_index==-1))
-		{
-			history.append(path);
-		}
-		else
-		{
-			while(history.size()>(history_index+1)) history.removeLast();
-			history.append(path);
-			++history_index;
-		}
-	}
-	//
-	emit currentNoteChanged(old_index, current_index);
-}
-
-void NoteList::historyBack()
-{
-	if(!historyHasBack()) return;
-	for(int j=history_index-1; j>=0; --j)
-	{
-		const QString& note_fname = history.at(j);
-		for(int i=0; i<vec.size(); ++i)
-		{
-			if(vec[i]->absolutePath()==note_fname)
-			{
-				history_back_pressed = true;
-				tabs->setCurrentIndex(i);
-				return;
-			}
-		}
-	}
-}
-
-void NoteList::historyForward()
-{
-	if(!historyHasForward()) return;
-	for(int j=history_index+1; j<history.size(); ++j)
-	{
-		const QString& note_fname = history.at(j);
-		for(int i=0; i<vec.size(); ++i)
-		{
-			if(vec[i]->absolutePath()==note_fname)
-			{
-				history_forward_pressed = true;
-				tabs->setCurrentIndex(i);
-				return;
-			}
-		}
-	}
+    int old_index = current_index;
+    current_index = index;
+    const QString path = vec[current_index]->absolutePath();
+    emit currentNoteChanged(old_index, current_index);
 }
 
 void NoteList::showExtensionsChanged(bool show_extensions)
 {
-	for(int i=0; i<vec.size(); ++i)
-	{
-		vec[i]->updateTitle(show_extensions);
-		tabs->setTabText(i, vec[i]->title());
-	}
+    for (int i = 0; i < vec.size(); ++i)
+    {
+        vec[i]->updateTitle(show_extensions);
+        tabs->setTabText(i, vec[i]->title());
+    }
 }
 
 void NoteList::tabPositionChanged()
 {
-	tabs->setTabPosition(QTabWidget::TabPosition(settings.getTabPosition()));
+    tabs->setTabPosition(static_cast<QTabWidget::TabPosition>(settings.getTabPosition()));
 }
 
-// Saving all notes
 void NoteList::saveAll()
 {
-	Note* note;
     QMap<QString, int> noteCursorPositions;
-    QTextEdit *editor;
-    foreach (note, vec) {
-        note->save(true); // Forced saving
-        if (note->widget()) {
-            editor = qobject_cast<QTextEdit*>(note->widget());
-            if (editor)
+    for (Note *note : vec)
+    {
+        note->save(true);
+        if (note->widget())
+        {
+            if (auto *editor = qobject_cast<QTextEdit*>(note->widget()))
+            {
                 noteCursorPositions[note->fileName()] = editor->textCursor().position();
+            }
         }
     }
-    // Check for exist cursor position file.
-    QFile cursorPositionFile(QString("%1/%2").arg(dir.absolutePath())
-                             .arg(FILE_WITH_CURSOR_POSITIONS));
-    if (cursorPositionFile.exists() == true)
+    QFile cursorPositionFile(dir.filePath(FILE_WITH_CURSOR_POSITIONS));
+    if (cursorPositionFile.exists())
+    {
         cursorPositionFile.remove();
-    QSettings cursorPositionSettings(cursorPositionFile.fileName(), QSettings::IniFormat);
-    cursorPositionSettings.beginGroup("Positions");
-    QMap<QString, int>::const_iterator i = noteCursorPositions.constBegin();
-    while (i != noteCursorPositions.constEnd()) {
-        cursorPositionSettings.setValue(i.key(), i.value());
-        ++i;
     }
-    cursorPositionSettings.endGroup();
+    QSettings cursorSettings(cursorPositionFile.fileName(), QSettings::IniFormat);
+    cursorSettings.beginGroup("Positions");
+    for (auto it = noteCursorPositions.constBegin(); it != noteCursorPositions.constEnd(); ++it)
+    {
+        cursorSettings.setValue(it.key(), it.value());
+    }
+    cursorSettings.endGroup();
 }
 
 void NoteList::notesPathChanged()
@@ -506,23 +573,24 @@ void NoteList::notesPathChanged()
                        tr("Notes path changed!\nDo you want to move your notes to new place?"),
                        QMessageBox::Yes | QMessageBox::No,
                        parentWidget);
-	int ret = msgBox.exec();
-    if(ret == QMessageBox::Yes) {
+    if (msgBox.exec() == QMessageBox::Yes)
+    {
         QString previousDirPath = dir.absolutePath();
-		dir.setPath(settings.getNotesPath());
-		QString dir_path = dir.absolutePath();
-        move(dir_path, previousDirPath);
-	}
+        dir.setPath(settings.getNotesPath());
+        move(dir.absolutePath(), previousDirPath);
+    }
     else
-        QMessageBox::information(parentWidget, tr("Notes path change"),
-                                 tr("You need restart application to get effect."));
+    {
+        QMessageBox::information(parentWidget,
+                                 tr("Notes path change"),
+                                 tr("You need to restart the application for changes to take effect."));
+    }
 }
 
-void NoteList::retranslate(const QLocale& locale)
+void NoteList::retranslate(const QLocale &locale)
 {
-	Note* note;
-	foreach (note, vec)
-	{
-		note->retranslate(locale);
-	}
+    for (Note *note : vec)
+    {
+        note->retranslate(locale);
+    }
 }

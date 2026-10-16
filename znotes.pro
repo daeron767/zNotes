@@ -5,7 +5,7 @@ TARGET = znotes
 VERSION = "0.4.9-qt6"
 DEFINES += APP_VERSION=\\\"$$VERSION\\\"
 
-QT += core gui widgets network printsupport xml core5compat
+QT += core gui widgets network printsupport xml
 
 TEMPLATE = app
 CONFIG += c++17
