@@ -7,21 +7,29 @@ class TextEdit;
 
 class TextNote : public Note
 {
-	Q_OBJECT
+    Q_OBJECT
 
 public:
-	TextNote(const QFileInfo& fileinfo, Note::Type type_new);
-	~TextNote();
-	void load(); //Reading note's content
-	void save(bool forced = false); //Saving note's content
-	void copy() const; //Coping note's content to clipboard
-	bool find(const QString& text, bool next=false); //Searching text in a note's content
-	QWidget* widget();
-    bool isDocumentSupported() const;
-    QTextDocument* document() const;
+    TextNote(const QFileInfo &fileinfo, Note::Type type_new, QObject *parent = nullptr);
+    ~TextNote() override;
+
+    void load() override;                    // Reading note's content
+    void save(bool forced = false) override; // Saving note's content
+    void copy() const override;              // Copying note's content to clipboard
+    
+    bool find(const QString &text, 
+              QTextDocument::FindFlags flags = {}, 
+              bool wrap = false) override;
+              
+    void highlightAll(const QString &text, 
+                      QTextDocument::FindFlags flags = {}) override;
+
+    QWidget* widget() override;
+    bool isDocumentSupported() const override;
+    QTextDocument* document() const override;
 
 private:
-	TextEdit* text_edit;
+    TextEdit *text_edit{nullptr};
 };
 
 #endif // TEXTNOTE_H

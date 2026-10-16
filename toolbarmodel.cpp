@@ -61,10 +61,13 @@ void ToolbarItems::remove(int pos)
   This model contains all existing items
 */
 
-ItemModel::ItemModel(ToolbarItems& t_items)
-	: items(t_items), v(t_items.getAllElems())
+ItemModel::ItemModel(ToolbarItems& t_items, QObject *parent)
+    : QAbstractListModel(parent), items(t_items), v(t_items.getAllElems())
 {
-	connect(&t_items, SIGNAL(reset()), this, SIGNAL(modelReset()));
+    connect(&t_items, &ToolbarItems::reset, this, [this]() {
+        beginResetModel();
+        endResetModel();
+    });
     // TODO: connect to settings
 }
 
@@ -140,10 +143,13 @@ bool ItemModel::dropMimeData(const QMimeData* data, Qt::DropAction action, int r
   This model contains items, added on toolbar
 */
 
-ItemToolbarModel::ItemToolbarModel(ToolbarItems& t_items)
-	: items(t_items), v(t_items.getToolbarElems())
+ItemToolbarModel::ItemToolbarModel(ToolbarItems& t_items, QObject *parent)
+    : QAbstractListModel(parent), items(t_items), v(t_items.getToolbarElems())
 {
-	connect(&t_items, SIGNAL(reset()), this, SIGNAL(modelReset()));
+    connect(&t_items, &ToolbarItems::reset, this, [this]() {
+        beginResetModel();
+        endResetModel();
+    });
 }
 
 int ItemToolbarModel::rowCount(const QModelIndex&) const

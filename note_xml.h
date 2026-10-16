@@ -3,29 +3,34 @@
 
 #include "note.h"
 
+#include <QDomDocument>
+#include <memory>
+
 class QTreeWidget;
-class QDomDocument;
 class QDomElement;
 class QTreeWidgetItem;
-class QMenu;
-class QAction;
 
 class XmlNote : public Note
 {
-	Q_OBJECT
+    Q_OBJECT
+
 public:
-	XmlNote(const QFileInfo& fileinfo, Note::Type type_new);
-	~XmlNote();
-	void load(); //Reading note's content
-	void save(bool forced = false); //Saving note's content
-	void copy() const; //Coping note's content to clipboard
-	QWidget* widget();
+    XmlNote(const QFileInfo &fileinfo, Note::Type type_new, QObject *parent = nullptr);
+    ~XmlNote() override;
+
+    void load() override;                         // Reading note's content
+    void save(bool forced = false) override;     // Saving note's content
+    void copy() const override;                   // Copying note's content to clipboard
+    QWidget* widget() override;
+
+    bool isDocumentSupported() const override { return false; }
+    QTextDocument* document() const override { return nullptr; }
+
 private:
-	QTreeWidget* tree_widget;
-	QDomDocument* document;
-	//QMenu* context_menu;
-	//
-	void apendTask(QDomElement* element, QTreeWidgetItem* parent = 0);
+    QTreeWidget *tree_widget = nullptr;
+    QDomDocument m_domDocument;
+
+    void appendTask(const QDomElement &element, QTreeWidgetItem *parent = nullptr);
 };
 
 #endif // NOTE_XML_H

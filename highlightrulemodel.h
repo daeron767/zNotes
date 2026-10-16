@@ -1,37 +1,38 @@
 #ifndef HIGHLIGHTRULEMODEL_H
 #define HIGHLIGHTRULEMODEL_H
 
-#include <QAbstractItemModel>
+#include <QAbstractTableModel>
 #include <QVector>
 
 #include "settings.h"
 
-class HighlightRuleModel : public QAbstractItemModel
+class HighlightRuleModel : public QAbstractTableModel
 {
-	Q_OBJECT
+    Q_OBJECT
+
 public:
-	explicit HighlightRuleModel(QObject* parent, const QVector<HighlightRule>&);
-	int	columnCount(const QModelIndex& parent = QModelIndex()) const;
-	int	rowCount(const QModelIndex& parent = QModelIndex()) const;
-	QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const;
-	QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const;
-	bool setData(const QModelIndex& index, const QVariant & value, int role = Qt::EditRole);
-	Qt::ItemFlags flags(const QModelIndex& index) const;
-	QModelIndex index(int, int, const QModelIndex&) const;
-	QModelIndex parent(const QModelIndex&) const;
-	void appendRow();
-	void removeRow(const QModelIndex&);
-	void up(const QModelIndex&);
-	void down(const QModelIndex&);
-	const QVector<HighlightRule>& getRules() const { return rules; }
+    explicit HighlightRuleModel(QObject *parent, const QVector<HighlightRule> &rules);
+    ~HighlightRuleModel() override = default;
 
-signals:
+    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
 
-public slots:
+    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+    bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
+    Qt::ItemFlags flags(const QModelIndex &index) const override;
+
+    void appendRow();
+    bool removeRows(int row, int count, const QModelIndex &parent = QModelIndex()) override;
+    void removeRow(const QModelIndex &index);
+
+    void up(const QModelIndex &index);
+    void down(const QModelIndex &index);
+
+    const QVector<HighlightRule>& getRules() const { return m_rules; }
 
 private:
-	QVector<HighlightRule> rules;
-
+    QVector<HighlightRule> m_rules;
 };
 
 #endif // HIGHLIGHTRULEMODEL_H

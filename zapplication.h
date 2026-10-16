@@ -1,24 +1,22 @@
-#ifndef ZAPPLICATION_H
-#define ZAPPLICATION_H
+#pragma once
 
 #include "single_inst/qtsingleapplication.h"
 
-class zApplication: public QtSingleApplication
-{
-	Q_OBJECT
-public:
-	zApplication(int &argc, char **argv, bool GUIenabled = true);
-	zApplication(const QString &id, int &argc, char **argv);
-#if QT_VERSION < 0x050000
-	zApplication(int &argc, char **argv, Type type);
-#endif
-#if defined(Q_WS_X11)
-	zApplication(Display* dpy, Qt::HANDLE visual = 0, Qt::HANDLE colormap = 0);
-	zApplication(Display* dpy, int &argc, char **argv, Qt::HANDLE visual = 0, Qt::HANDLE cmap= 0);
-	zApplication(Display* dpy, const QString &appId, int argc, char **argv, Qt::HANDLE visual = 0, Qt::HANDLE colormap = 0);
-#endif
-	~zApplication() {}
-    void commitData(QSessionManager &); //fixing "KDE logout was cancelled by zNotes" bug
-};
+class QSessionManager;
 
-#endif // ZAPPLICATION_H
+class zApplication : public QtSingleApplication
+{
+    Q_OBJECT
+
+public:
+    explicit zApplication(int &argc, char **argv, bool guiEnabled = true);
+    zApplication(const QString &id, int &argc, char **argv);
+    ~zApplication() override = default;
+
+    // Prevent copying
+    zApplication(const zApplication &) = delete;
+    zApplication &operator=(const zApplication &) = delete;
+
+private slots:
+    void onCommitDataRequest(QSessionManager &manager);
+};

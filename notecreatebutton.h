@@ -4,22 +4,18 @@
 #include <QPushButton>
 #include "notetype.h"
 
-class NoteList;
-
 class NoteCreateButton : public QPushButton
 {
-	Q_OBJECT
+    Q_OBJECT
+
 public:
-	explicit NoteCreateButton(QWidget *parent, const NoteType& ntype);
-	//void paintEvent(QPaintEvent* e);
+    explicit NoteCreateButton(const NoteType &ntype, QWidget *parent = nullptr);
+    ~NoteCreateButton() override = default;
 
-signals:
-
-public slots:
+    [[nodiscard]] const NoteType& noteType() const { return m_noteType; }
 
 private:
-	const NoteType& note_type;
-//	NoteList* note_list;
+    NoteType m_noteType;
 };
 
 #endif // NOTECREATEBUTTON_H

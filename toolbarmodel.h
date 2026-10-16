@@ -31,7 +31,7 @@ private:
 class ItemModel : public QAbstractListModel
 {
 public:
-	ItemModel(ToolbarItems& t_items);
+	explicit ItemModel(ToolbarItems& t_items, QObject *parent = nullptr);
 	int rowCount(const QModelIndex & = QModelIndex()) const;
 	QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const;
 	Qt::ItemFlags flags(const QModelIndex &index) const;
@@ -51,7 +51,7 @@ private:
 class ItemToolbarModel : public QAbstractListModel
 {
 public:
-	ItemToolbarModel(ToolbarItems& t_items);
+	explicit ItemToolbarModel(ToolbarItems& t_items, QObject *parent = nullptr);
 	int rowCount(const QModelIndex& = QModelIndex()) const;
 	QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const;
 	Qt::ItemFlags flags(const QModelIndex &index) const;

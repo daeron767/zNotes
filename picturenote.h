@@ -8,20 +8,24 @@ class QScrollArea;
 
 class PictureNote : public Note
 {
-	Q_OBJECT
+    Q_OBJECT
+
 public:
-	PictureNote(const QFileInfo& fileinfo, Note::Type type_new);
-	~PictureNote();
-	void load(); //Reading note's content
-	void save(bool forced = false); //Saving note's content
-	void copy() const; //Coping note's content to clipboard
-	QWidget* widget();
-    bool isDocumentSupported() const;
-    QTextDocument* document() const;
+    explicit PictureNote(const QFileInfo &fileinfo,
+                         Note::Type type_new,
+                         QObject *parent = nullptr);
+    ~PictureNote() override;
+
+    void load() override;                         // Reading note's content
+    void save(bool forced = false) override;      // Saving note's content
+    void copy() const override;                   // Copying note's content to clipboard
+    QWidget* widget() override;
+    [[nodiscard]] bool isDocumentSupported() const override;
+    [[nodiscard]] QTextDocument* document() const override;
 
 private:
-	QLabel* label;
-	QScrollArea* scroll_area;
+    QLabel *label{nullptr};
+    QScrollArea *scroll_area{nullptr};
 };
 
 #endif // PICTURENOTE_H

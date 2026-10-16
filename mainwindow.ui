@@ -31,7 +31,7 @@
        <item>
         <widget class="QLabel" name="label">
          <property name="text">
-          <string>Enter text:</string>
+          <string>Find:</string>
          </property>
         </widget>
        </item>
@@ -39,16 +39,41 @@
         <widget class="QLineEdit" name="edSearch"/>
        </item>
        <item>
-        <widget class="QPushButton" name="btSearchClose">
+        <widget class="QToolButton" name="tbCase">
+         <property name="text"><string>Aa</string></property>
+         <property name="checkable"><bool>true</bool></property>
+         <property name="toolTip"><string>Case Sensitive</string></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QToolButton" name="tbPrev">
+         <property name="text"><string>▲</string></property>
+         <property name="toolTip"><string>Find Previous</string></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QToolButton" name="tbNext">
+         <property name="text"><string>▼</string></property>
+         <property name="toolTip"><string>Find Next</string></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QToolButton" name="tbHighlightAll">
+         <property name="text"><string>*</string></property>
+         <property name="checkable"><bool>true</bool></property>
+         <property name="toolTip"><string>Highlight All Matches</string></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btSearchMode">
          <property name="text">
-          <string/>
+          <string>Page</string>
          </property>
-         <property name="icon">
-          <iconset resource="znotes.qrc">
-           <normaloff>:/res/close.png</normaloff>:/res/close.png</iconset>
-         </property>
-         <property name="flat">
+         <property name="checkable">
           <bool>true</bool>
+         </property>
+         <property name="toolTip">
+          <string>Toggle Search Scope (Page / All Notes)</string>
          </property>
         </widget>
        </item>

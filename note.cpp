@@ -1,70 +1,90 @@
 #include "note.h"
 #include "settings.h"
 
-#include <QTextStream>
-#include <QClipboard>
-#include <QApplication>
 #include <QDir>
-#include <QPrinter>
 
 /*
-  Note is abstract class for notes
+  Note is an abstract base class for zNotes documents
 */
 
-Note::Note(const QFileInfo& fileinfo, Note::Type type_new)
-	: _type(type_new),
-	file_info(fileinfo),
-	content_changed(false)
+Note::Note(const QFileInfo& fileinfo, Note::Type type_new, QObject *parent)
+    : QObject(parent),
+      _type(type_new),
+      file_info(fileinfo),
+      content_changed(false)
 {
-	updateTitle(settings.getShowExtensions());
+    updateTitle(settings.getShowExtensions());
 }
 
 Note::~Note()
 {
-	file.close();
-	file.remove();
+    if (file.isOpen())
+    {
+        file.close();
+    }
+    // CRITICAL: Do NOT call file.remove() in destructor.
 }
 
-//Setting note title
+// Updating note title based on preference settings
 void Note::updateTitle(bool show_extensions)
 {
-	file.setFileName(file_info.absoluteFilePath());
-    _title = (show_extensions || (file_info.fileName()[0]=='.'))
-             ? file_info.fileName() : file_info.completeBaseName();
+    file.setFileName(file_info.absoluteFilePath());
+    
+    const QString filename = file_info.fileName();
+    if (show_extensions || filename.startsWith('.'))
+    {
+        _title = filename;
+    }
+    else
+    {
+        _title = file_info.completeBaseName();
+    }
 }
 
-//Renaming note
-void Note::rename(const QString& new_name)
+// Renaming note
+void Note::rename(const QString &new_name)
 {
-	file.close();
-	QString absolute_file_path = file_info.dir().absoluteFilePath(new_name);
-	file.rename(absolute_file_path);
-	file_info.setFile(file);
-	updateTitle(settings.getShowExtensions());
+    if (file.isOpen())
+        file.close();
+
+    QString absolute_file_path = file_info.dir().absoluteFilePath(new_name);
+    if (file.rename(absolute_file_path))
+    {
+        file_info.setFile(file);
+        updateTitle(settings.getShowExtensions());
+    }
 }
 
-//Moving note to another folder
-void Note::move(const QString& new_dirname)
+// Moving note to another folder
+void Note::move(const QString &new_dirname)
 {
-	file.close();
-	QString filename = file_info.fileName();
-	QString absolute_file_path = QDir(new_dirname).absoluteFilePath(filename);
-	file.rename(absolute_file_path);
-	file_info.setFile(file);
+    if (file.isOpen())
+        file.close();
+
+    QString filename = file_info.fileName();
+    QString absolute_file_path = QDir(new_dirname).absoluteFilePath(filename);
+    if (file.rename(absolute_file_path))
+    {
+        file_info.setFile(file);
+    }
 }
 
-//Searching in a note's content
-bool Note::find(const QString& text, bool from_start)
+bool Note::find(const QString &text, QTextDocument::FindFlags flags, bool from_start)
 {
-	Q_UNUSED(text)
+    Q_UNUSED(text)
+    Q_UNUSED(flags)
     Q_UNUSED(from_start)
     return false;
 }
 
-//------------------------------------------------------------------------------
+void Note::highlightAll(const QString &text, QTextDocument::FindFlags flags)
+{
+    Q_UNUSED(text)
+    Q_UNUSED(flags)
+}
 
-//On note content changing
+// Slot called when note content changes
 void Note::contentChanged()
 {
-	content_changed = true;
+    content_changed = true;
 }

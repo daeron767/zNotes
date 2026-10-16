@@ -3,38 +3,34 @@
 
 #include <QFrame>
 
-class QSignalMapper;
-
 class NoteList;
 
 namespace Ui {
-	class NoteCreateWidget;
+class NoteCreateWidget;
 }
 
 class NoteCreateWidget : public QFrame
 {
-	Q_OBJECT
+    Q_OBJECT
 
 public:
-	explicit NoteCreateWidget(QWidget* parent, NoteList* note_list);
-	~NoteCreateWidget();
+    explicit NoteCreateWidget(NoteList *note_list, QWidget *parent = nullptr);
+    ~NoteCreateWidget() override;
 
 protected:
-	void changeEvent(QEvent* e);
-
-private slots:
-	void clicked(int id);
-
-public slots:
-	void closeEvent(QCloseEvent* event);
+    void showEvent(QShowEvent *event) override;
+    void closeEvent(QCloseEvent *event) override;
+    void changeEvent(QEvent *e) override;
 
 signals:
-	void closed(bool);
+    void closed(bool state);
+
+private slots:
+    void onButtonClicked(int id);
 
 private:
-	Ui::NoteCreateWidget *ui;
-	NoteList* notes;
-	QSignalMapper* signal_mapper;
+    Ui::NoteCreateWidget *ui;
+    NoteList *m_notes{nullptr};
 };
 
 #endif // NOTECREATEWIDGET_H

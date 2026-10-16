@@ -1,99 +1,133 @@
 #include "note_xml.h"
 
-#include <QClipboard>
 #include <QApplication>
-
-#include <QTreeWidget>
-#include <QDomDocument>
-#include <QDomElement>
+#include <QClipboard>
 #include <QHeaderView>
-#include <QDateTime>
+#include <QSaveFile>
+#include <QTextStream>
+#include <QTreeWidget>
 
-//document
-
-//TODO: тут модель нужна таки...
-
-XmlNote::XmlNote(const QFileInfo& fileinfo, Note::Type type_new)
-	: Note(fileinfo, type_new)
+XmlNote::XmlNote(const QFileInfo &fileinfo, Note::Type type_new, QObject *parent)
+    : Note(fileinfo, type_new, parent)
 {
-	document = new QDomDocument();
-	tree_widget = new QTreeWidget();
-	tree_widget->header()->setResizeMode(QHeaderView::ResizeToContents);
-	tree_widget->setColumnCount(3);
-	//tree_widget->setHeaderHidden(true);
-//	tree_widget->setHeaderLabel(title()+":");
+    tree_widget = new QTreeWidget();
+    tree_widget->setColumnCount(3);
 
-	load(); //loading note's content
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+    tree_widget->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+#else
+    tree_widget->header()->setResizeMode(QHeaderView::ResizeToContents);
+#endif
+
+    load(); // Loading note's content
 }
 
 XmlNote::~XmlNote()
 {
-	delete tree_widget;
+    // tree_widget is owned by the container UI parent (e.g. QTabWidget).
+    // m_domDocument is automatically cleaned up on stack.
 }
 
-//Reading file
+// Reading file
 void XmlNote::load()
 {
-	file.close();
-	if(!file.open(QIODevice::ReadOnly)) return;
-	if(!document->setContent(&file))
-	{
-		file.close();
-		return;
-	}
-	file.close();
-	QDomElement docElem = document->documentElement();
+    if (file.isOpen())
+        file.close();
 
-	QDomNode n = docElem.firstChild();
-	while(!n.isNull())
-	{
-		QDomElement e = n.toElement(); // try to convert the node to an element.
-		if(!e.isNull() && e.tagName()=="task") apendTask(&e);
-		n = n.nextSibling();
-	}
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+        return;
+
+    QString errorMsg;
+    int errorLine = 0;
+    int errorColumn = 0;
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    if (!m_domDocument.setContent(&file, &errorMsg, &errorLine, &errorColumn))
+#else
+    if (!m_domDocument.setContent(&file, false, &errorMsg, &errorLine, &errorColumn))
+#endif
+    {
+        file.close();
+        return;
+    }
+    file.close();
+
+    tree_widget->clear();
+    QDomElement docElem = m_domDocument.documentElement();
+    QDomNode n = docElem.firstChild();
+    while (!n.isNull())
+    {
+        QDomElement e = n.toElement();
+        if (!e.isNull() && e.tagName() == "task")
+        {
+            appendTask(e);
+        }
+        n = n.nextSibling();
+    }
 }
 
-void XmlNote::apendTask(QDomElement* element, QTreeWidgetItem* parent)
+void XmlNote::appendTask(const QDomElement &element, QTreeWidgetItem *parent)
 {
-	QTreeWidgetItem* item_text = new QTreeWidgetItem(tree_widget);
+    QTreeWidgetItem *item = nullptr;
 
-	if(parent==0) tree_widget->insertTopLevelItem(0, item_text);
-	else parent->insertChild(0, item_text);
+    if (parent == nullptr)
+    {
+        item = new QTreeWidgetItem(tree_widget);
+    }
+    else
+    {
+        item = new QTreeWidgetItem(parent);
+    }
 
-	QDomNode n = element->firstChild();
-	while(!n.isNull())
-	{
-		QDomElement e = n.toElement(); // try to convert the node to an element.
-		if(!e.isNull())
-		{
-			if(e.tagName()=="title") item_text->setText(0, e.text());
-			if(e.tagName()=="task") apendTask(&e);
-		}
-		n = n.nextSibling();
-	}
+    QDomNode n = element.firstChild();
+    while (!n.isNull())
+    {
+        QDomElement e = n.toElement();
+        if (!e.isNull())
+        {
+            if (e.tagName() == "title")
+            {
+                item->setText(0, e.text());
+            }
+            else if (e.tagName() == "task")
+            {
+                appendTask(e, item);
+            }
+        }
+        n = n.nextSibling();
+    }
 }
 
-//Saving note
+// Saving note
 void XmlNote::save(bool forced)
 {
-	if(!(content_changed || forced)) return; //If file doesn't need in saving, exiting from function
-//	file.close();
-//	if(!file.open(QFile::WriteOnly | QFile::Text)) return;
-//	QTextStream out(&file);
-//	out << document->toString();
-//	file.close();
-	content_changed = false;
+    if (!(content_changed || forced))
+        return;
+
+    QSaveFile saveFile(absolutePath());
+    if (saveFile.open(QIODevice::WriteOnly | QIODevice::Text))
+    {
+        QTextStream out(&saveFile);
+        out << m_domDocument.toString();
+        if (saveFile.commit())
+        {
+            content_changed = false;
+        }
+    }
 }
 
-//Returning widget (it's can be placed to tabwidget)
+// Returning widget (it can be placed in a tab widget)
 QWidget* XmlNote::widget()
 {
-	return tree_widget;
+    return tree_widget;
 }
 
-//Coping note's content to clipboard
+// Copying note's content to clipboard
 void XmlNote::copy() const
 {
-	QClipboard* clipboard = QApplication::clipboard();
-	clipboard->setText(document->toString());
+    QClipboard *clipboard = QApplication::clipboard();
+    if (clipboard)
+    {
+        clipboard->setText(m_domDocument.toString());
+    }
 }

@@ -1,116 +1,121 @@
 #ifndef TODOMODEL_H
 #define TODOMODEL_H
 
-#include <QDomNode>
-#include <QHash>
-
 #include <QAbstractItemModel>
-#include <QSortFilterProxyModel>
-#include <QDomDocument>
-#include <QModelIndex>
 #include <QDateTime>
-#include <QVariant>
+#include <QDomDocument>
+#include <QDomNode>
 #include <QFile>
-
-#include <QItemDelegate>
+#include <QList>
+#include <QModelIndex>
+#include <QSortFilterProxyModel>
+#include <QString>
+#include <QVariant>
 
 class Task
 {
 public:
-	Task(QDomDocument* document, QDomNode &node, int row, Task *parent = 0);
-	~Task();
+    enum Priority
+    {
+        Low,
+        Medium,
+        High
+    };
+    explicit Task(QDomDocument *document,
+                  const QDomNode &node,
+                  int row,
+                  Task *parent = nullptr);
+    ~Task();
+    // Disable copying to prevent invalid tree nodes
+    Task(const Task &) = delete;
+    Task &operator=(const Task &) = delete;
+    [[nodiscard]] const QList<Task*>& subtasks() const { return _subtasks; }
+    [[nodiscard]] Task* parent() const { return _parent; }
+    [[nodiscard]] int row() const { return _row; }
+    void setRow(int row) { _row = row; }
+    [[nodiscard]] const QDomNode& node() const { return _node; }
+    [[nodiscard]] const QString& title() const { return _title; }
+    [[nodiscard]] const QString& comment() const { return _comment; }
+    [[nodiscard]] const QDateTime& dateStart() const { return _date_start; }
+    [[nodiscard]] const QDateTime& dateStop() const { return _date_stop; }
+    [[nodiscard]] const QDateTime& dateLimit() const { return _date_limit; }
+    [[nodiscard]] bool done() const { return _done; }
+    [[nodiscard]] bool limited() const { return !_date_limit.isNull(); }
+    [[nodiscard]] Priority priority() const { return _priority; }
 
-	enum Priority
-	{
-		medium, low, high
-	};
-
-	inline const QList<Task*>& subtasks() const { return _subtasks; }
-	inline Task* parent() const { return _parent; }
-	inline int row() const { return _row; };
-
-	inline const QDomNode& node() const { return _node; }
-
-	inline const QString& title() const { return _title; }
-	inline const QString& comment() const { return _comment; }
-	inline const QDateTime& dateStart() const { return _date_start; }
-	inline const QDateTime& dateStop() const { return _date_stop; }
-	inline const QDateTime& dateLimit() const { return _date_limit; }
-	inline bool done() const { return _done; }
-	inline bool limited() const { return !_date_limit.isNull(); }
-	inline Priority priority() const { return _priority; }
-
-	void setTitle(const QString& v);
-	void setComment(const QString& v);
-	void setDateStart(const QDateTime& v);
-	void setDateStop(const QDateTime& v);
-	void setDateLimit(const QDateTime& v);
-	void setDone(bool v);
-	void setPriority(Priority v);
-
-	void insertSubTask(int pos=-1);
-	void removeSubTask(int pos);
+    void setTitle(const QString &v);
+    void setComment(const QString &v);
+    void setDateStart(const QDateTime &v);
+    void setDateStop(const QDateTime &v);
+    void setDateLimit(const QDateTime &v);
+    void setDone(bool v);
+    void setPriority(Priority v);
+    void insertSubTask(int pos = -1);
+    void removeSubTask(int pos);
 
 private:
-	QDomDocument* _document;
-
-	QDomNode _node;
-	int _row;
-	Task* _parent;
-	QList<Task*> _subtasks;
-
-	QString _title;
-	QString _comment;
-	QDateTime _date_start, _date_stop, _date_limit;
-	Priority _priority;
-	bool _done;
+    void updateSubtaskRows();
+    QDomDocument *_document{nullptr};
+    QDomNode _node;
+    int _row{0};
+    Task *_parent{nullptr};
+    QList<Task*> _subtasks;
+    QString _title;
+    QString _comment;
+    QDateTime _date_start;
+    QDateTime _date_stop;
+    QDateTime _date_limit;
+    Priority _priority{Medium};
+    bool _done{false};
 };
 
 class TodoModel : public QAbstractItemModel
 {
-	Q_OBJECT
+    Q_OBJECT
 
 public:
-	TodoModel(QObject *parent = 0);
-	~TodoModel();
+    explicit TodoModel(QObject *parent = nullptr);
+    ~TodoModel() override;
+    [[nodiscard]] QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+    bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
+    [[nodiscard]] Qt::ItemFlags flags(const QModelIndex &index) const override;
+    [[nodiscard]] QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
+    [[nodiscard]] QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const override;
+    [[nodiscard]] QModelIndex parent(const QModelIndex &child) const override;
+    [[nodiscard]] int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+    [[nodiscard]] int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+    [[nodiscard]] QDomDocument* document() const { return _document; }
+    QDomDocument* load(QFile &file);
+    bool insertRows(int row, int count, const QModelIndex &parent = QModelIndex()) override;
+    bool removeRows(int row, int count, const QModelIndex &parent = QModelIndex()) override;
 
-	QVariant data(const QModelIndex& index, int role) const;
-	bool setData(const QModelIndex& index, const QVariant& data, int role);
-	Qt::ItemFlags flags(const QModelIndex &index) const;
-	QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const;
-	QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const;
-	QModelIndex parent(const QModelIndex &child) const;
-	int rowCount(const QModelIndex &parent = QModelIndex()) const;
-	int columnCount(const QModelIndex &parent = QModelIndex()) const;
+    [[nodiscard]] Qt::DropActions supportedDropActions() const override;
+    [[nodiscard]] QStringList mimeTypes() const override;
+    [[nodiscard]] QMimeData* mimeData(const QModelIndexList &indexes) const override;
 
-	QDomDocument* load(QFile& file);
-
-	bool insertRows(int row, int count, const QModelIndex& parent = QModelIndex());
-	bool removeRows(int row, int count, const QModelIndex& parent = QModelIndex());
-
-	Qt::DropActions supportedDropActions() const;
-	QStringList mimeTypes() const;
-	QMimeData* mimeData(const QModelIndexList& indexes) const;
-	bool dropMimeData(const QMimeData* data, Qt::DropAction action, int row, int column, const QModelIndex& parent);
-
-	Task* getTask(const QModelIndex &index) const;
+    bool dropMimeData(const QMimeData *data, Qt::DropAction action, int row, int column, const QModelIndex &parent) override;
+    [[nodiscard]] Task* getTask(const QModelIndex &index) const;
 
 private:
-	QDomDocument* _document;
-	Task* _root_task;
+    QDomDocument *_document{nullptr};
+    Task *_root_task{nullptr};
 };
 
 class TodoProxyModel : public QSortFilterProxyModel
 {
-	Q_OBJECT
+    Q_OBJECT
+
 public:
-	TodoProxyModel();
-	bool filterAcceptsRow ( int source_row, const QModelIndex & source_parent ) const;
-	void hideDoneTasks(bool hide = true);
+    explicit TodoProxyModel(QObject *parent = nullptr);
+    ~TodoProxyModel() override = default;
+    void hideDoneTasks(bool hide = true);
+    [[nodiscard]] bool isHidingDoneTasks() const { return hide_done_tasks; }
+
+protected:
+    [[nodiscard]] bool filterAcceptsRow(int source_row, const QModelIndex &source_parent) const override;
+
 private:
-	bool hide_done_tasks;
-signals:
-    void filterChanged();
+    bool hide_done_tasks{false};
 };
 
-#endif // TODOMODEL_H
+#endif // TODOMODEL_H 

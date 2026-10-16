@@ -1,35 +1,52 @@
 #include "highlighter.h"
 #include "settings.h"
-#include <QRegExp>
+#include <QRegularExpression>
+#include <QTextCharFormat>
 
 Highlighter::Highlighter(QTextDocument *parent)
-	: QSyntaxHighlighter(parent)
+    : QSyntaxHighlighter(parent)
 {
 }
 
 void Highlighter::highlightBlock(const QString &text)
 {
-	if(settings.getNoteHighlight())
-	{
-		foreach (const HighlightRule &rule, settings.getHighlightRules())
-		{
-            if(!rule.enabled)
-                continue;
-            if(rule.regexp.isEmpty())
-                continue;
-			QRegExp expression(rule.regexp);
-            if(!expression.isValid())
-                continue;
-			QTextCharFormat format;
-			format.setForeground(rule.color);
-			int index = expression.indexIn(text);
-			while (index >= 0)
-			{
-				int length = expression.matchedLength();
-				setFormat(index, length, format);
-				index = expression.indexIn(text, index+length);
-			}
-		}
-	}
-	setCurrentBlockState(0);
+    if (!settings.getNoteHighlight())
+    {
+        setCurrentBlockState(0);
+        return;
+    }
+
+    const auto &rules = settings.getHighlightRules();
+    for (const HighlightRule &rule : rules)
+    {
+        if (!rule.enabled || !rule.regexp.isValid())
+            continue;
+
+        QRegularExpression expression(rule.regexp);
+        if (!expression.isValid())
+            continue;
+
+        QTextCharFormat format;
+        format.setForeground(rule.color);
+
+        QRegularExpressionMatchIterator it = expression.globalMatch(text);
+        while (it.hasNext())
+        {
+            QRegularExpressionMatch match = it.next();
+            int start = match.capturedStart();
+            int length = match.capturedLength();
+
+            if (length > 0)
+            {
+                setFormat(start, length, format);
+            }
+            else
+            {
+                // Prevent infinite loop on 0-length matches (e.g. boundary anchors)
+                break;
+            }
+        }
+    }
+
+    setCurrentBlockState(0);
 }

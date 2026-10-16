@@ -5,10 +5,14 @@
 
 class Highlighter : public QSyntaxHighlighter
 {
+    Q_OBJECT
+
 public:
-	Highlighter(QTextDocument *parent = 0);
+    explicit Highlighter(QTextDocument *parent = nullptr);
+    ~Highlighter() override = default;
+
 protected:
-	void highlightBlock(const QString &text);
+    void highlightBlock(const QString &text) override;
 };
 
 #endif // HIGHLIGHTER_H

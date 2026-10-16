@@ -4,17 +4,18 @@
 #include <QDialog>
 
 namespace Ui {
-	class aboutDialog;
+    class aboutDialog;
 }
 
 class aboutDialog : public QDialog {
-	Q_OBJECT
+    Q_OBJECT
+
 public:
-	aboutDialog(QWidget *parent = 0);
-	~aboutDialog();
+    explicit aboutDialog(QWidget *parent = nullptr);
+    ~aboutDialog() override;
 
 private:
-	Ui::aboutDialog *ui;
+    Ui::aboutDialog *ui;
 };
 
 #endif // ABOUTDIALOG_H

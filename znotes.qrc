@@ -32,11 +32,14 @@
         <file>res/toolbar/format-text-italic.png</file>
         <file>res/toolbar/format-text-strikethrough.png</file>
         <file>res/toolbar/format-text-underline.png</file>
+        <file>res/toolbar/format-text-serif.png</file>
         <file>res/toolbar/go-next.png</file>
         <file>res/toolbar/go-previous.png</file>
         <file>res/toolbar/help-about.png</file>
         <file>res/toolbar/list-add.png</file>
         <file>res/toolbar/list-remove.png</file>
+        <file>res/toolbar/padlock.png</file>
+        <file>res/toolbar/padlocked.png</file>
         <file>res/toolbar/printer.png</file>
         <file>res/toolbar/run-build.png</file>
         <file>res/toolbar/window-close.png</file>

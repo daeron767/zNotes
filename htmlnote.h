@@ -7,29 +7,38 @@ class TextEdit;
 
 class HtmlNote : public Note
 {
-	Q_OBJECT
+    Q_OBJECT
+
 public:
-	HtmlNote(const QFileInfo& fileinfo, Note::Type type_new);
-	~HtmlNote();
-	void load(); //Reading note's content
-	void save(bool forced = false); //Saving note's content
-	void copy() const; //Coping note's content to clipboard
-	bool find(const QString& text, bool next=false); //Searching text in a note's content
-	QWidget* widget();
-	void setSelFormat(const QTextCharFormat& format);
-	QTextCharFormat getSelFormat() const;
-    bool isDocumentSupported() const;
-    QTextDocument* document() const;
+    HtmlNote(const QFileInfo &fileinfo, Note::Type type_new, QObject *parent = nullptr);
+    ~HtmlNote() override;
+
+    void load() override;                    // Reading note's content
+    void save(bool forced = false) override; // Saving note's content
+    void copy() const override;              // Copying note's content to clipboard
+    
+    bool find(const QString &text, 
+              QTextDocument::FindFlags flags = {}, 
+              bool wrap = false) override;
+              
+    void highlightAll(const QString &text, 
+                      QTextDocument::FindFlags flags = {}) override;
+
+    QWidget* widget() override;
+    void setSelFormat(const QTextCharFormat &format) override;
+    QTextCharFormat getSelFormat() const override;
+    bool isDocumentSupported() const override;
+    QTextDocument* document() const override;
 
 private slots:
-	void currentCharFormatChanged(const QTextCharFormat&);
-	void noteNotePastePlaintextChanged();
+    void currentCharFormatChanged(const QTextCharFormat &format);
+    void notePastePlaintextChanged();
 
 private:
-	TextEdit* text_edit;
+    TextEdit *text_edit{nullptr};
 
 signals:
-	void formatChanged(const QFont& font);
+    void formatChanged(const QTextCharFormat &format);
 };
 
 #endif // HTMLNOTE_H

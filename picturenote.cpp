@@ -1,60 +1,96 @@
 #include "picturenote.h"
 
-#include <QClipboard>
 #include <QApplication>
-
+#include <QClipboard>
 #include <QLabel>
+#include <QPixmap>
 #include <QScrollArea>
-#include <QPicture>
-#include <QMessageBox>
 
-PictureNote::PictureNote(const QFileInfo& fileinfo, Note::Type type_new)
-	: Note(fileinfo, type_new)
+PictureNote::PictureNote(const QFileInfo &fileinfo, Note::Type type_new, QObject *parent)
+    : Note(fileinfo, type_new, parent)
 {
-	label = new QLabel();
-	label->setScaledContents(true);
+    scroll_area = new QScrollArea();
+    scroll_area->setAlignment(Qt::AlignCenter);
 
-	scroll_area = new QScrollArea;
-	scroll_area->setWidget(label);
+    label = new QLabel(scroll_area);
+    label->setScaledContents(false);
 
-	load(); //loading note's content
+    scroll_area->setWidget(label);
+
+    load(); // loading note's content
 }
 
 PictureNote::~PictureNote()
 {
-	label->deleteLater();
-	scroll_area->deleteLater();
+    // scroll_area takes ownership of label via setWidget().
+    // Deleting scroll_area will automatically clean up label.
+    if (scroll_area)
+    {
+        scroll_area->deleteLater();
+        scroll_area = nullptr;
+    }
 }
 
-//Reading file
+// Reading file
 void PictureNote::load()
 {
-	file.close();
-	QImage image(file.fileName());
-	label->setPixmap(QPixmap::fromImage(image));
-	label->adjustSize();
+    if (file.isOpen())
+    {
+        file.close();
+    }
+
+    QImage image(file.fileName());
+    if (!image.isNull())
+    {
+        label->setPixmap(QPixmap::fromImage(image));
+        label->adjustSize();
+    }
+    else
+    {
+        label->setText(tr("Unable to load image: %1").arg(file.fileName()));
+    }
 }
 
-//Saving note
+// Saving note
 void PictureNote::save(bool forced)
 {
-	if(!(content_changed || forced)) return; //If file doesn't need in saving, exiting from function
-	file.close();
-	//label->picture()->save(file.fileName()); //TODO: this is readonly now
-	content_changed = false;
+    if (!(content_changed || forced))
+        return;
+
+    if (file.isOpen())
+    {
+        file.close();
+    }
+
+    // Picture notes are currently read-only
+    content_changed = false;
 }
 
-//Returning widget (it's can be placed to tabwidget)
+// Returning widget (can be placed in QTabWidget)
 QWidget* PictureNote::widget()
 {
-	return scroll_area;
+    return scroll_area;
 }
 
-//Coping note's content to clipboard
+// Copying note's content to clipboard
 void PictureNote::copy() const
 {
-	QClipboard* clipboard = QApplication::clipboard();
-        clipboard->setPixmap(label->pixmap());
+    if (!label)
+        return;
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    QPixmap pix = label->pixmap();
+    if (!pix.isNull())
+    {
+        QApplication::clipboard()->setPixmap(pix);
+    }
+#else
+    const QPixmap *pix = label->pixmap();
+    if (pix && !pix->isNull())
+    {
+        QApplication::clipboard()->setPixmap(*pix);
+    }
+#endif
 }
 
 bool PictureNote::isDocumentSupported() const
@@ -64,5 +100,5 @@ bool PictureNote::isDocumentSupported() const
 
 QTextDocument* PictureNote::document() const
 {
-    return 0;
+    return nullptr;
 }

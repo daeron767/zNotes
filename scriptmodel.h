@@ -2,16 +2,27 @@
 #define SCRIPTMODEL_H
 
 #include <QStandardItemModel>
+#include <QString>
 
 class ScriptModel : public QStandardItemModel
 {
+    Q_OBJECT
+
 public:
-	ScriptModel();
-	void append(const QString& name = QString(), const QString& file = QString(), const QString& icon = QString());
-	const QString getName(int i) { return data(index(i,0)).toString(); }
-	const QString getFile(int i) { return data(index(i,1)).toString(); }
-	const QString getIcon(int i) { return data(index(i,2)).toString(); }
-	QVariant headerData ( int section, Qt::Orientation orientation, int role = Qt::DisplayRole ) const;
+    explicit ScriptModel(QObject *parent = nullptr);
+    ~ScriptModel() override = default;
+
+    void append(const QString &name = QString(),
+                const QString &file = QString(),
+                const QString &icon = QString());
+
+    [[nodiscard]] QString getName(int i) const;
+    [[nodiscard]] QString getFile(int i) const;
+    [[nodiscard]] QString getIcon(int i) const;
+
+    [[nodiscard]] QVariant headerData(int section,
+                                      Qt::Orientation orientation,
+                                      int role = Qt::DisplayRole) const override;
 };
 
 #endif // SCRIPTMODEL_H
