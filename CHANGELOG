@@ -1,3 +1,6 @@
+zNotes 0.5.1
+- Fixed depreciated toolchain reference by replacing CONFIG with QMAKE_CXXFLAGS
+
 zNotes 0.5.0
 * Ported source to Qt6, added new tools available from Preferences
 * Added scope features to Search function

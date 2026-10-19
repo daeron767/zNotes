@@ -8,7 +8,7 @@ DEFINES += APP_VERSION=\\\"$$VERSION\\\"
 QT += core gui widgets network printsupport xml
 
 TEMPLATE = app
-CONFIG += c++17
+QMAKE_CXXFLAGS += -std=gnu++17
 
 OBJECTS_DIR = build
 UI_DIR = build
@@ -112,3 +112,4 @@ unix {
 }
 
 win32:RC_FILE = znotes.rc
+
