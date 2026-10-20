@@ -2,7 +2,7 @@
 # zNotes Qt 6 port
 # -------------------------------------------------
 TARGET = znotes
-VERSION = "0.4.9-qt6"
+VERSION = "0.5.2-qt6"
 DEFINES += APP_VERSION=\\\"$$VERSION\\\"
 
 QT += core gui widgets network printsupport xml
@@ -76,9 +76,18 @@ FORMS += mainwindow.ui \
     aboutDialog.ui \
     notecreatewidget.ui
 
-TRANSLATIONS += translations/znotes_ru.ts \
-                translations/znotes_cs.ts \
-                # ... (keep the rest)
+TRANSLATIONS += translations/znotes_cs.ts \
+		translations/znotes_de.ts \
+		translations/znotes_en.ts \
+		translations/znotes_es.ts \
+		translations/znotes_nl.ts \
+		translations/znotes_pl.ts \
+		translations/znotes_pt_BR.ts \
+		translations/znotes_ru.ts \
+		translations/znotes_sk.ts \
+		translations/znotes_sv.ts \
+		translations/znotes_uk.ts
+
 
 RESOURCES += znotes.qrc
 
